@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ImportStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Answer {
+  A
+  B
+  C
+  D
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  username     String       @unique
+  passwordHash String
+  sessionVersion Int        @default(0) @map("session_version")
+  role         Role
+  status       UserStatus   @default(ACTIVE)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  imports      QuestionBankImport[] @relation("OwnerImports")
+  questions    Question[]
+  activeImports UserActiveImport[]
+  attempts     MockAttempt[]
+
+  @@map("users")
+}
+
+model QuestionBankImport {
+  id               String       @id @default(cuid())
+  ownerUserId      String       @map("owner_user_id")
+  label            String
+  syllabus         String?
+  questionType     String?      @map("question_type")
+  originalFilePath String       @map("original_file_path")
+  checksum         String
+  rowCount         Int          @map("row_count")
+  questionCount    Int          @map("question_count")
+  status           ImportStatus @default(ACTIVE)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  inactivatedBy    String?      @map("inactivated_by")
+  inactivatedAt    DateTime?    @map("inactivated_at")
+  owner            User         @relation("OwnerImports", fields: [ownerUserId], references: [id])
+  questions        Question[]
+  activeForUsers   UserActiveImport[]
+
+  @@index([ownerUserId, status])
+  @@map("question_bank_imports")
+}
+
+model Question {
+  id                     String  @id @default(cuid())
+  importId               String  @map("import_id")
+  ownerUserId            String  @map("owner_user_id")
+  questionText           String  @map("question_text")
+  optionA                String  @map("option_a")
+  optionB                String  @map("option_b")
+  optionC                String  @map("option_c")
+  optionD                String  @map("option_d")
+  correctAnswer          Answer  @map("correct_answer")
+  explanation            String?
+  topic                  String?
+  syllabus               String?
+  category               String?
+  normalizedDuplicateKey String  @map("normalized_duplicate_key")
+  import                 QuestionBankImport @relation(fields: [importId], references: [id])
+  owner                  User    @relation(fields: [ownerUserId], references: [id])
+  attemptQuestions       MockAttemptQuestion[]
+
+  @@unique([ownerUserId, normalizedDuplicateKey])
+  @@index([ownerUserId, importId])
+  @@map("questions")
+}
+
+model UserActiveImport {
+  userId   String @map("user_id")
+  importId String @map("import_id")
+  user     User   @relation(fields: [userId], references: [id])
+  import   QuestionBankImport @relation(fields: [importId], references: [id])
+
+  @@id([userId, importId])
+  @@map("user_active_imports")
+}
+
+model MockAttempt {
+  id                     String   @id @default(cuid())
+  userId                 String   @map("user_id")
+  requestedQuestionCount Int      @map("requested_question_count")
+  durationMinutes        Int      @map("duration_minutes")
+  extensionUsed          Boolean  @default(false) @map("extension_used")
+  startedAt              DateTime @default(now()) @map("started_at")
+  submittedAt            DateTime? @map("submitted_at")
+  attemptedCount         Int      @default(0) @map("attempted_count")
+  correctCount           Int      @default(0) @map("correct_count")
+  incorrectCount         Int      @default(0) @map("incorrect_count")
+  scorePercent           Float    @default(0) @map("score_percent")
+  user                   User     @relation(fields: [userId], references: [id])
+  questions              MockAttemptQuestion[]
+
+  @@index([userId, startedAt])
+  @@map("mock_attempts")
+}
+
+model MockAttemptQuestion {
+  attemptId      String  @map("attempt_id")
+  questionId     String  @map("question_id")
+  displayOrder   Int     @map("display_order")
+  selectedAnswer Answer? @map("selected_answer")
+  isCorrect      Boolean? @map("is_correct")
+  attempt        MockAttempt @relation(fields: [attemptId], references: [id])
+  question       Question @relation(fields: [questionId], references: [id])
+
+  @@id([attemptId, questionId])
+  @@unique([attemptId, displayOrder])
+  @@map("mock_attempt_questions")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String   @map("actor_user_id")
+  targetUserId String?  @map("target_user_id")
+  action       String
+  entityType   String?  @map("entity_type")
+  entityId     String?  @map("entity_id")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}
