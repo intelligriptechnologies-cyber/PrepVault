@@ -1138,6 +1138,18 @@ function App() {
     : tab === "admin" && !isAdminActor
       ? "profile"
       : tab;
+  const pageTitles: Record<string, string> = {
+    admin: "Admin",
+    browse: "Browse",
+    configuration: "Configuration",
+    imports: "Imports",
+    mock: "Mock",
+    practice: "Practice",
+    profile: "Profile"
+  };
+  useEffect(() => {
+    document.title = `PrepVault - ${pageTitles[activeTab] ?? "Home"}`;
+  }, [activeTab]);
   const navButtonClass = (name: string) => activeTab === name ? "nav-button active" : "nav-button";
   return (
     <main>
