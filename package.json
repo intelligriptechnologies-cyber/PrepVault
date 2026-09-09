@@ -7,8 +7,8 @@
     "dev": "concurrently \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "tsx watch src/server/index.ts",
     "dev:web": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
-    "start": "tsx src/server/index.ts",
+    "build": "prisma generate && tsc --noEmit && vite build",
+    "start": "prisma migrate deploy && tsx src/server/index.ts",
     "test": "vitest run",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -29,6 +29,7 @@
     "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tsx": "^4.23.13",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -45,7 +46,6 @@
     "@vitejs/plugin-react": "6.1.1",
     "concurrently": "^8.2.2",
     "prisma": "7.10.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "vite": "8.2.2",
     "vitest": "5.0.0"

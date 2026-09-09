@@ -602,6 +602,14 @@ app.post("/api/mock-attempts/:id/submit", requireAuth, requireStudentContext, as
   res.json({ attempt: updated });
 }));
 
+const clientDistPath = path.resolve("dist/web");
+if (process.env.NODE_ENV === "production" && fs.existsSync(path.join(clientDistPath, "index.html"))) {
+  app.use(express.static(clientDistPath));
+  app.get(/^(?!\/api(?:\/|$)).*/, (_req, res) => {
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+}
+
 app.use(errorHandler);
 
 app.listen(config.port, () => {
