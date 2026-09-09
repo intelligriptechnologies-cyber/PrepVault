@@ -129,6 +129,10 @@ input, select {
   min-height: 40px;
   font: inherit;
 }
+select,
+select option {
+  font-weight: 400;
+}
 input:disabled, select:disabled {
   background: #f4f8f6;
   color: #6d7c79;
@@ -917,12 +921,13 @@ nav {
 }
 .browse-list-panel .list-item {
   display: -webkit-box;
-  min-height: 58px;
-  max-height: 58px;
+  min-height: 48px;
+  max-height: 48px;
+  padding: 5px 12px;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  line-height: 1.35;
+  line-height: 1.3;
   white-space: normal;
 }
 .question {
@@ -1169,9 +1174,12 @@ pre.error { white-space: pre-wrap; padding: 12px; border-radius: 6px; }
 .history-item {
   display: grid;
   align-content: center;
-  gap: 3px;
-  height: 76px;
+  gap: 2px;
+  height: 52px;
+  min-height: 52px;
+  padding: 7px 12px;
   overflow: hidden;
+  line-height: 1.15;
 }
 .history-item span,
 .history-item small {
@@ -1182,6 +1190,7 @@ pre.error { white-space: pre-wrap; padding: 12px; border-radius: 6px; }
 }
 .history-item small {
   color: var(--muted);
+  font-size: 12px;
   font-weight: 650;
 }
 .history-item.selected small,

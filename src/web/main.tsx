@@ -31,6 +31,7 @@ import prepVaultLogo from "./assets/prepvault-logo.png";
 import "./styles.css";
 
 const API = import.meta.env.VITE_API_BASE ?? "/api";
+const BROWSE_PREVIEW_LENGTH = 200;
 type Role = "ADMIN" | "STUDENT";
 type UserStatus = "ACTIVE" | "INACTIVE";
 type Answer = "A" | "B" | "C" | "D";
@@ -112,6 +113,12 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 function optionValue(question: Question, key: Answer) {
   return question[`option${key}` as keyof Question] as string;
+}
+
+function questionPreview(questionText: string) {
+  return questionText.length > BROWSE_PREVIEW_LENGTH
+    ? `${questionText.slice(0, BROWSE_PREVIEW_LENGTH).trimEnd()}...`
+    : questionText;
 }
 
 function isTctLabel(label: string) {
@@ -969,7 +976,7 @@ function Browse() {
               key={q.id}
               onClick={() => setSelected(q)}
             >
-              {q.questionText}
+              {questionPreview(q.questionText)}
             </button>
           ))}
         </div>
