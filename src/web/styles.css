@@ -466,6 +466,29 @@ nav {
 .user-create-form {
   grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.2fr) minmax(150px, 1fr) minmax(105px, .6fr) 94px;
 }
+.form-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.form-field input,
+.form-field select {
+  width: 100%;
+}
+.form-field input[aria-invalid="true"],
+.form-field select[aria-invalid="true"] {
+  border-color: #e11d48;
+  outline-color: #e11d48;
+}
+.field-error {
+  min-height: 16px;
+  color: #9f1239;
+  font-size: 12px;
+  font-weight: 700;
+}
+.configuration-panel .row {
+  grid-template-columns: minmax(0, 1fr);
+}
 .app-page {
   width: min(1240px, 100%);
   margin: 0 auto;

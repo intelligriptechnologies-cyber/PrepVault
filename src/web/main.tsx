@@ -91,6 +91,8 @@ type QuestionsResponse = {
   totalCount: number;
   activeImportCount: number;
 };
+type CreateUserForm = { name: string; username: string; password: string; role: Role };
+type CreateUserErrors = Partial<Record<keyof CreateUserForm, string>>;
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API}${path}`, {
@@ -113,6 +115,17 @@ function optionValue(question: Question, key: Answer) {
 
 function isTctLabel(label: string) {
   return label.toUpperCase().includes("TCT");
+}
+
+function validateCreateUserForm(form: CreateUserForm) {
+  const errors: CreateUserErrors = {};
+  if (!form.name.trim()) errors.name = "Name is required.";
+  if (!form.username.trim()) errors.username = "Email is required.";
+  else if (form.username.trim().length < 3) errors.username = "Email must be at least 3 characters.";
+  if (!form.password) errors.password = "Temporary password is required.";
+  else if (form.password.length < 8) errors.password = "Password must be at least 8 characters.";
+  if (!form.role) errors.role = "Role is required.";
+  return errors;
 }
 
 function formatFileSize(size: number) {
@@ -224,7 +237,9 @@ function Admin({ refresh }: { refresh: () => void }) {
   const [userSearch, setUserSearch] = useState("");
   const [metadataSearch, setMetadataSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", username: "", password: "", role: "STUDENT" as Role });
+  const [form, setForm] = useState<CreateUserForm>({ name: "", username: "", password: "", role: "STUDENT" });
+  const [formErrors, setFormErrors] = useState<CreateUserErrors>({});
+  const [isCreating, setIsCreating] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ name: "", username: "", role: "STUDENT" as Role, status: "ACTIVE" as UserStatus, password: "" });
   const [message, setMessage] = useState("");
@@ -280,13 +295,32 @@ function Admin({ refresh }: { refresh: () => void }) {
     event.preventDefault();
     setError("");
     setMessage("");
+    const nextErrors = validateCreateUserForm(form);
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0 || isCreating) return;
+    setIsCreating(true);
     try {
       await api("/admin/users", { method: "POST", body: JSON.stringify(form) });
       setForm({ name: "", username: "", password: "", role: "STUDENT" });
+      setFormErrors({});
       setMessage("User created.");
-      load();
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create user");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function setImportStatus(id: string, status: "ACTIVE" | "INACTIVE") {
+    setError("");
+    setMessage("");
+    try {
+      await api(`/admin/imports/${id}/${status === "ACTIVE" ? "activate" : "inactivate"}`, { method: "POST" });
+      setMessage(status === "ACTIVE" ? "Import activated." : "Import inactivated.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update import");
     }
   }
 
@@ -341,13 +375,57 @@ function Admin({ refresh }: { refresh: () => void }) {
       <div className="panel data-panel admin-users-panel">
         <h2><Users size={18} /> Users</h2>
         <form className="grid-form user-create-form" onSubmit={createUser}>
-          <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <input placeholder="Email" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-          <input placeholder="Temporary password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-          <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-            <option>STUDENT</option><option>ADMIN</option>
-          </select>
-          <button>Create</button>
+          <label className="form-field">
+            <input
+              placeholder="Name"
+              value={form.name}
+              aria-invalid={Boolean(formErrors.name)}
+              onChange={(e) => {
+                setForm({ ...form, name: e.target.value });
+                if (formErrors.name) setFormErrors({ ...formErrors, name: undefined });
+              }}
+            />
+            {formErrors.name && <small className="field-error">{formErrors.name}</small>}
+          </label>
+          <label className="form-field">
+            <input
+              placeholder="Email"
+              value={form.username}
+              aria-invalid={Boolean(formErrors.username)}
+              onChange={(e) => {
+                setForm({ ...form, username: e.target.value });
+                if (formErrors.username) setFormErrors({ ...formErrors, username: undefined });
+              }}
+            />
+            {formErrors.username && <small className="field-error">{formErrors.username}</small>}
+          </label>
+          <label className="form-field">
+            <input
+              placeholder="Temporary password"
+              type="password"
+              value={form.password}
+              aria-invalid={Boolean(formErrors.password)}
+              onChange={(e) => {
+                setForm({ ...form, password: e.target.value });
+                if (formErrors.password) setFormErrors({ ...formErrors, password: undefined });
+              }}
+            />
+            {formErrors.password && <small className="field-error">{formErrors.password}</small>}
+          </label>
+          <label className="form-field">
+            <select
+              value={form.role}
+              aria-invalid={Boolean(formErrors.role)}
+              onChange={(e) => {
+                setForm({ ...form, role: e.target.value as Role });
+                if (formErrors.role) setFormErrors({ ...formErrors, role: undefined });
+              }}
+            >
+              <option>STUDENT</option><option>ADMIN</option>
+            </select>
+            {formErrors.role && <small className="field-error">{formErrors.role}</small>}
+          </label>
+          <button disabled={isCreating}>{isCreating ? "Creating..." : "Create"}</button>
         </form>
         {message && <p className="ok">{message}</p>}
         {error && <p className="error">{error}</p>}
@@ -432,7 +510,11 @@ function Admin({ refresh }: { refresh: () => void }) {
                 </small>
               </span>
               <span>{item.status}</span>
-              {item.status === "ACTIVE" && <button className="ghost" onClick={async () => { await api(`/admin/imports/${item.id}/inactivate`, { method: "POST" }); load(); }}>Inactivate</button>}
+              {item.status === "ACTIVE" ? (
+                <button className="ghost" onClick={() => setImportStatus(item.id, "INACTIVE")}>Inactivate</button>
+              ) : (
+                <button className="ghost" onClick={() => setImportStatus(item.id, "ACTIVE")}>Activate</button>
+              )}
             </div>
           ))}
           {selectedUserId && filteredImports.length === 0 && <p className="muted">No imports match this user and search.</p>}
@@ -841,7 +923,6 @@ function Configuration() {
               />
               <span><span className={isTctLabel(item.label) ? "import-label tct-label" : "import-label"}>{item.label}</span><small>{item.questionCount} questions | {item.syllabus || "No syllabus"} | {item.questionType || "No type"}</small></span>
             </label>
-            <button className="ghost" onClick={async () => { await api(`/imports/${item.id}/inactivate`, { method: "PATCH" }); load(); }}>Inactivate</button>
           </div>
         ))}
         {activeImports.length === 0 && <p className="muted">No active imports are available.</p>}

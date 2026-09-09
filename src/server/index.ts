@@ -275,6 +275,21 @@ app.post("/api/admin/imports/:id/inactivate", requireAuth, requireAdmin, asyncHa
   res.json({ import: updated });
 }));
 
+app.post("/api/admin/imports/:id/activate", requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const updated = await prisma.questionBankImport.update({
+    where: { id: req.params.id },
+    data: { status: "ACTIVE", inactivatedBy: null, inactivatedAt: null }
+  });
+  await auditLog({
+    actorUserId: req.actor!.id,
+    targetUserId: updated.ownerUserId,
+    action: "IMPORT_ACTIVATE",
+    entityType: "import",
+    entityId: updated.id
+  });
+  res.json({ import: updated });
+}));
+
 app.post("/api/admin/emulation/:studentId/start", requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const target = await prisma.user.findUnique({ where: { id: req.params.studentId } });
   if (!target || target.role !== "STUDENT" || target.status !== "ACTIVE") {
@@ -422,23 +437,6 @@ app.post("/api/imports", requireAuth, requireStudentContext, upload.single("file
   });
 
   res.status(201).json({ import: result });
-}));
-
-app.patch("/api/imports/:id/inactivate", requireAuth, requireStudentContext, asyncHandler(async (req, res) => {
-  const importRow = await prisma.questionBankImport.findFirst({
-    where: { id: req.params.id, ownerUserId: req.effectiveUser!.id }
-  });
-  if (!importRow) throw new ApiError(404, "IMPORT_NOT_FOUND", "Import not found.");
-  const updated = await prisma.questionBankImport.update({
-    where: { id: importRow.id },
-    data: {
-      status: "INACTIVE",
-      inactivatedBy: req.actor!.id,
-      inactivatedAt: new Date()
-    }
-  });
-  await prisma.userActiveImport.deleteMany({ where: { importId: updated.id } });
-  res.json({ import: updated });
 }));
 
 app.put("/api/imports/active", requireAuth, requireStudentContext, asyncHandler(async (req, res) => {
