@@ -78,6 +78,7 @@ type MockAttempt = {
   correctCount: number;
   incorrectCount: number;
   scorePercent: number;
+  topics?: string[];
   questions: Array<{
     questionId: string;
     displayOrder: number;
@@ -661,14 +662,14 @@ function Imports() {
     setImportSuccess(null);
   }
 
-  function clearSelection() {
+  function clearImportForm(nextSuccess: ImportSuccess | null = null) {
     setFile(null);
     setLabel("");
     setSyllabus("");
     setQuestionType("");
     setValidation({ status: "idle" });
     setError("");
-    setImportSuccess(null);
+    setImportSuccess(nextSuccess);
     setFileInputKey((key) => key + 1);
   }
 
@@ -708,12 +709,11 @@ function Imports() {
     setIsImporting(true);
     try {
       const result = await api<{ import: ImportRow }>("/imports", { method: "POST", body: data });
-      setImportSuccess({
+      clearImportForm({
         questionCount: result.import.questionCount,
         rowCount: result.import.rowCount ?? validation.rowCount,
         label: result.import.label
       });
-      setValidation({ status: "idle" });
     } catch (err) {
       const details = err instanceof Error ? (err as Error & { details?: unknown }).details : undefined;
       const detailMessage = Array.isArray(details) ? details.join("\n") : "";
@@ -764,7 +764,7 @@ function Imports() {
                 <button type="button" className="button-outline compact" disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
                   Change
                 </button>
-                <button type="button" className="icon-text-button" disabled={isImporting} onClick={clearSelection}>
+                <button type="button" className="icon-text-button" disabled={isImporting} onClick={() => clearImportForm()}>
                   <Trash2 size={15} /> Remove file
                 </button>
               </div>
@@ -866,6 +866,9 @@ function Imports() {
             {statusLabel}
           </div>
           <div className="import-actions">
+            <button type="button" className="button-secondary" disabled={isImporting} onClick={() => clearImportForm()}>
+              <X size={16} /> Clear
+            </button>
             <button type="button" className="button-secondary" disabled={!file || validation.status === "validating" || isImporting} onClick={validateFile}>
               <FileCheck size={16} /> {validation.status === "validating" ? "Validating..." : "Validate file"}
             </button>
@@ -1057,10 +1060,25 @@ function MockTests() {
   const [minutes, setMinutes] = useState(10);
   const [attempt, setAttempt] = useState<MockAttempt | null>(null);
   const [history, setHistory] = useState<MockAttempt[]>([]);
+  const [historyFilters, setHistoryFilters] = useState({ from: "", to: "", topic: "" });
+  const [topicOptions, setTopicOptions] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => Date.now());
-  const loadHistory = () => api<{ attempts: MockAttempt[] }>("/mock-attempts").then((data) => setHistory(data.attempts));
-  useEffect(() => { loadHistory(); }, []);
+  const historyQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (historyFilters.from) params.set("from", historyFilters.from);
+    if (historyFilters.to) params.set("to", historyFilters.to);
+    if (historyFilters.topic) params.set("topic", historyFilters.topic);
+    const query = params.toString();
+    return query ? `?${query}` : "";
+  }, [historyFilters]);
+  const loadHistory = () => api<{ attempts: MockAttempt[] }>(`/mock-attempts${historyQuery}`).then((data) => setHistory(data.attempts));
+  useEffect(() => { loadHistory().catch((err) => setError(err instanceof Error ? err.message : "Could not load mock history")); }, [historyQuery]);
+  useEffect(() => {
+    api<{ imports: ImportRow[] }>("/imports")
+      .then((data) => setTopicOptions(Array.from(new Set(data.imports.map((item) => item.label))).sort((a, b) => a.localeCompare(b))))
+      .catch(() => undefined);
+  }, []);
   useEffect(() => {
     if (!attempt || attempt.submittedAt) return;
     setNow(Date.now());
@@ -1096,9 +1114,20 @@ function MockTests() {
 
   async function choose(questionId: string, answer: Answer) {
     if (!attempt) return;
-    await api(`/mock-attempts/${attempt.id}/answers/${questionId}`, { method: "POST", body: JSON.stringify({ answer }) });
-    const data = await api<{ attempt: MockAttempt }>(`/mock-attempts/${attempt.id}`);
-    setAttempt(data.attempt);
+    setError("");
+    setAttempt((current) => current && current.id === attempt.id
+      ? {
+        ...current,
+        questions: current.questions.map((item) =>
+          item.questionId === questionId ? { ...item, selectedAnswer: answer } : item
+        )
+      }
+      : current);
+    try {
+      await api(`/mock-attempts/${attempt.id}/answers/${questionId}`, { method: "POST", body: JSON.stringify({ answer }) });
+    } catch {
+      setError("Could not save answer. Your choice is shown, but submit will use the last saved answer.");
+    }
   }
 
   async function submit() {
@@ -1172,6 +1201,7 @@ function MockTests() {
               </div>
             )}
           </div>
+          {error && <p className="error">{error}</p>}
           {submitted && (
             <div className="score-summary">
               <b>Score: {attempt.correctCount}/{attempt.requestedQuestionCount} ({attempt.scorePercent.toFixed(1)}%)</b>
@@ -1199,8 +1229,45 @@ function MockTests() {
       {(!attempt || submitted) && (
         <div className="panel data-panel mock-history-panel">
           <h2><History size={18} /> History</h2>
+          <div className="history-filters">
+            <label>
+              From
+              <input
+                type="date"
+                value={historyFilters.from}
+                onChange={(e) => setHistoryFilters((current) => ({ ...current, from: e.target.value }))}
+              />
+            </label>
+            <label>
+              To
+              <input
+                type="date"
+                value={historyFilters.to}
+                onChange={(e) => setHistoryFilters((current) => ({ ...current, to: e.target.value }))}
+              />
+            </label>
+            <label>
+              Topic
+              <select
+                value={historyFilters.topic}
+                onChange={(e) => setHistoryFilters((current) => ({ ...current, topic: e.target.value }))}
+              >
+                <option value="">All topics</option>
+                {topicOptions.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+              </select>
+            </label>
+          </div>
           <div className="list">
-            {history.map((item) => <button className="list-item" key={item.id} onClick={async () => setAttempt((await api<{ attempt: MockAttempt }>(`/mock-attempts/${item.id}`)).attempt)}>{new Date(item.startedAt).toLocaleString()} | {item.correctCount}/{item.requestedQuestionCount}</button>)}
+            {history.map((item) => (
+              <button
+                className="list-item history-item"
+                key={item.id}
+                onClick={async () => setAttempt((await api<{ attempt: MockAttempt }>(`/mock-attempts/${item.id}`)).attempt)}
+              >
+                <span>{new Date(item.startedAt).toLocaleString()} | {item.correctCount}/{item.requestedQuestionCount}</span>
+                <small>{item.topics?.length ? item.topics.join(" | ") : "No topics recorded"}</small>
+              </button>
+            ))}
             {history.length === 0 && <p className="muted">No mock attempts yet.</p>}
           </div>
         </div>

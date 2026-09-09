@@ -911,6 +911,20 @@ nav {
   justify-content: flex-start;
   text-align: left;
 }
+.browse-list-panel .list {
+  padding-right: 8px;
+  scrollbar-gutter: stable;
+}
+.browse-list-panel .list-item {
+  display: -webkit-box;
+  min-height: 58px;
+  max-height: 58px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
+  white-space: normal;
+}
 .question {
   font-size: 17px;
   font-weight: 750;
@@ -1140,6 +1154,40 @@ pre.error { white-space: pre-wrap; padding: 12px; border-radius: 6px; }
 .score-summary b {
   font-size: 18px;
 }
+.history-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.history-filters label {
+  min-width: 0;
+  color: #123f39;
+  font-size: 13px;
+  font-weight: 700;
+}
+.history-item {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  height: 76px;
+  overflow: hidden;
+}
+.history-item span,
+.history-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-item small {
+  color: var(--muted);
+  font-weight: 650;
+}
+.history-item.selected small,
+.history-item:hover:not(:disabled) small {
+  color: rgba(0, 89, 79, .82);
+}
 @keyframes progress-slide {
   0% { transform: translateX(-110%); }
   100% { transform: translateX(250%); }
@@ -1188,7 +1236,7 @@ pre.error { white-space: pre-wrap; padding: 12px; border-radius: 6px; }
   .workspace, .split, .profile-layout { grid-template-columns: 1fr; }
   .workspace, .split { grid-template-rows: repeat(2, minmax(0, 1fr)); }
   .grid-form, .dialog-grid, .mock-answers { grid-template-columns: 1fr; }
-  .summary-list, .metadata-summary, .mock-setup, .segmented { grid-template-columns: 1fr; }
+  .summary-list, .metadata-summary, .mock-setup, .segmented, .history-filters { grid-template-columns: 1fr; }
   .mock-setup button { width: 100%; margin-left: 0; }
   .mock-status { align-items: stretch; flex-direction: column; }
   .mock-timer { text-align: left; }

@@ -61,6 +61,11 @@ const mockCreateSchema = z.object({
   durationMinutes: z.number().int().min(5).max(120)
 });
 const answerSchema = z.object({ answer: z.enum(["A", "B", "C", "D"]) });
+const mockAttemptFiltersSchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  topic: z.string().trim().min(1).optional()
+});
 
 function publicUser(user: { id: string; name: string; username: string; role: string; status?: string }) {
   return {
@@ -89,6 +94,20 @@ async function activeImportIds(userId: string) {
 
 function removeUploadedFile(filePath: string) {
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
+
+function dateRangeFromQuery(from?: string, to?: string) {
+  return {
+    ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
+    ...(to ? { lt: new Date(new Date(`${to}T00:00:00.000Z`).getTime() + 86_400_000) } : {})
+  };
+}
+
+function withMockAttemptTopics<T extends { questions?: Array<{ question?: { import?: { label: string } } }> }>(attempt: T) {
+  const topics = Array.from(
+    new Set((attempt.questions ?? []).map((item) => item.question?.import?.label).filter((label): label is string => Boolean(label)))
+  );
+  return { ...attempt, topics };
 }
 
 async function validateUploadedWorkbook(filePath: string, userId: string) {
@@ -534,12 +553,27 @@ app.post("/api/mock-attempts", requireAuth, requireStudentContext, asyncHandler(
 }));
 
 app.get("/api/mock-attempts", requireAuth, requireStudentContext, asyncHandler(async (req, res) => {
+  const filters = mockAttemptFiltersSchema.parse(req.query);
+  const startedAt = dateRangeFromQuery(filters.from, filters.to);
   const attempts = await prisma.mockAttempt.findMany({
-    where: { userId: req.effectiveUser!.id },
+    where: {
+      userId: req.effectiveUser!.id,
+      ...(Object.keys(startedAt).length > 0 ? { startedAt } : {}),
+      ...(filters.topic
+        ? { questions: { some: { question: { import: { label: filters.topic } } } } }
+        : {})
+    },
+    include: {
+      questions: {
+        select: {
+          question: { select: { import: { select: { label: true } } } }
+        }
+      }
+    },
     orderBy: { startedAt: "desc" },
     take: 50
   });
-  res.json({ attempts });
+  res.json({ attempts: attempts.map(withMockAttemptTopics) });
 }));
 
 app.get("/api/mock-attempts/:id", requireAuth, requireStudentContext, asyncHandler(async (req, res) => {
