@@ -11,8 +11,23 @@
   --muted: #5e716d;
 }
 * { box-sizing: border-box; }
+html, body, #root { height: 100%; }
 body { margin: 0; min-width: 320px; background: #f6f8f7; }
 main { min-height: 100vh; }
+main.auth-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+main.auth-shell > section {
+  min-height: 0;
+}
+main.auth-shell > .app-page,
+main.auth-shell > .profile-layout {
+  overflow: auto;
+}
 header {
   display: flex;
   align-items: center;
@@ -398,12 +413,48 @@ nav {
   display: grid;
   gap: 18px;
   padding: 24px;
+  min-height: 0;
 }
 .workspace, .split, .profile-layout {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .mock-full {
   grid-template-columns: 1fr;
+}
+.workspace, .split, .mock-full {
+  height: 100%;
+  overflow: hidden;
+}
+.split > .panel,
+.workspace > .panel,
+.mock-full > .panel,
+.data-panel {
+  min-height: 0;
+}
+.data-panel,
+.mock-panel,
+.practice-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.configuration-panel {
+  width: min(1240px, calc(100% - 48px));
+  align-self: start;
+  justify-self: center;
+  max-height: calc(100% - 48px);
+  margin: 24px;
+}
+.configuration-panel .table,
+.admin-workspace .table,
+.browse-list-panel .list,
+.mock-history-panel .list,
+.mock-question-list,
+.question-detail-scroll,
+.practice-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 .grid-form {
   display: grid;
@@ -1112,6 +1163,7 @@ pre.error { white-space: pre-wrap; padding: 12px; border-radius: 6px; }
 }
 @media (max-width: 860px) {
   .workspace, .split, .profile-layout { grid-template-columns: 1fr; }
+  .workspace, .split { grid-template-rows: repeat(2, minmax(0, 1fr)); }
   .grid-form, .dialog-grid, .mock-answers { grid-template-columns: 1fr; }
   .summary-list, .metadata-summary, .mock-setup, .segmented { grid-template-columns: 1fr; }
   .mock-setup button { width: 100%; margin-left: 0; }

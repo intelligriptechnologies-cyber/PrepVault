@@ -338,7 +338,7 @@ function Admin({ refresh }: { refresh: () => void }) {
 
   return (
     <section className="workspace admin-workspace">
-      <div className="panel">
+      <div className="panel data-panel admin-users-panel">
         <h2><Users size={18} /> Users</h2>
         <form className="grid-form user-create-form" onSubmit={createUser}>
           <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -397,7 +397,7 @@ function Admin({ refresh }: { refresh: () => void }) {
           {filteredUsers.length === 0 && <p className="muted">No users match this search.</p>}
         </div>
       </div>
-      <div className="panel">
+      <div className="panel data-panel admin-metadata-panel">
         <h2><FileUp size={18} /> Import Metadata</h2>
         <div className="metadata-summary">
           <div>
@@ -824,7 +824,7 @@ function Configuration() {
     .reduce((total, item) => total + item.questionCount, 0);
 
   return (
-    <section className="panel">
+    <section className="panel data-panel configuration-panel">
       <h2><Settings size={18} /> Configuration</h2>
       <p className="meta">{active.length} active imports selected | {selectedQuestionCount} active questions</p>
       {error && <p className="error">{error}</p>}
@@ -870,7 +870,7 @@ function Browse() {
   const courseLabel = activeImportCount === 1 ? "course configured" : "courses configured";
   return (
     <section className="split">
-      <div className="panel">
+      <div className="panel data-panel browse-list-panel">
         <div className="browse-header">
           <h2><Search size={30} /> Browse</h2>
           <p className="browse-stats">
@@ -896,21 +896,23 @@ function Browse() {
 }
 
 function QuestionDetail({ question }: { question: Question | null }) {
-  if (!question) return <div className="panel muted">Select a question.</div>;
+  if (!question) return <div className="panel data-panel question-detail-panel muted">Select a question.</div>;
   return (
-    <div className="panel">
+    <div className="panel data-panel question-detail-panel">
       <h2><BookOpen size={18} /> Detail</h2>
-      <p className="question">{question.questionText}</p>
-      <div className="answer-rows">
-        {(["A", "B", "C", "D"] as const).map((key) => (
-          <div key={key} className={question.correctAnswer === key ? "answer-row correct" : "answer-row"}>
-            <b>{key}</b>
-            <span>{optionValue(question, key)}</span>
-          </div>
-        ))}
+      <div className="question-detail-scroll">
+        <p className="question">{question.questionText}</p>
+        <div className="answer-rows">
+          {(["A", "B", "C", "D"] as const).map((key) => (
+            <div key={key} className={question.correctAnswer === key ? "answer-row correct" : "answer-row"}>
+              <b>{key}</b>
+              <span>{optionValue(question, key)}</span>
+            </div>
+          ))}
+        </div>
+        <p><b>Explanation:</b> {question.explanation || "Not provided"}</p>
+        <p className="meta">{[question.topic, question.category, question.syllabus, question.import?.label].filter(Boolean).join(" | ")}</p>
       </div>
-      <p><b>Explanation:</b> {question.explanation || "Not provided"}</p>
-      <p className="meta">{[question.topic, question.category, question.syllabus, question.import?.label].filter(Boolean).join(" | ")}</p>
     </div>
   );
 }
@@ -955,9 +957,11 @@ function Practice() {
     <section className="panel practice-panel">
       <h2><Play size={18} /> Practice</h2>
       {question ? <>
-        <p className="question practice-question">{question.questionText}</p>
-        <div className="answers">{(["A", "B", "C", "D"] as const).map((key) => <button key={key} onClick={() => answer(key)}>{key}. {optionValue(question, key)}</button>)}</div>
-        {feedback && <div className={feedback.isCorrect ? "feedback okbox" : "feedback errorbox"}><b>{feedback.isCorrect ? "Correct" : "Incorrect"}</b><p>Correct answer: {feedback.correctAnswer}</p><p>{feedback.explanation}</p></div>}
+        <div className="practice-content">
+          <p className="question practice-question">{question.questionText}</p>
+          <div className="answers">{(["A", "B", "C", "D"] as const).map((key) => <button key={key} onClick={() => answer(key)}>{key}. {optionValue(question, key)}</button>)}</div>
+          {feedback && <div className={feedback.isCorrect ? "feedback okbox" : "feedback errorbox"}><b>{feedback.isCorrect ? "Correct" : "Incorrect"}</b><p>Correct answer: {feedback.correctAnswer}</p><p>{feedback.explanation}</p></div>}
+        </div>
         <div className="practice-nav">
           <button className="ghost" disabled={historyIndex <= 0} onClick={loadPrevious}>Previous</button>
           <button className="ghost" onClick={loadNext}>Next</button>
@@ -1112,7 +1116,7 @@ function MockTests() {
         </>}
       </div>
       {(!attempt || submitted) && (
-        <div className="panel">
+        <div className="panel data-panel mock-history-panel">
           <h2><History size={18} /> History</h2>
           <div className="list">
             {history.map((item) => <button className="list-item" key={item.id} onClick={async () => setAttempt((await api<{ attempt: MockAttempt }>(`/mock-attempts/${item.id}`)).attempt)}>{new Date(item.startedAt).toLocaleString()} | {item.correctCount}/{item.requestedQuestionCount}</button>)}
@@ -1129,9 +1133,8 @@ function App() {
   const [tab, setTab] = useState("imports");
   const refresh = () => api<Session>("/auth/me").then(setSession).catch(() => setSession(null));
   useEffect(() => { refresh(); }, []);
-  if (!session) return <Login onLogin={refresh} />;
-  const isAdminActor = session.user.role === "ADMIN";
-  const inStudentContext = session.effectiveUser.role === "STUDENT";
+  const isAdminActor = session?.user.role === "ADMIN";
+  const inStudentContext = session?.effectiveUser.role === "STUDENT";
   const studentTabs = ["configuration", "imports", "browse", "practice", "mock"];
   const activeTab = !inStudentContext && studentTabs.includes(tab)
     ? (isAdminActor ? "admin" : "profile")
@@ -1150,9 +1153,10 @@ function App() {
   useEffect(() => {
     document.title = `PrepVault - ${pageTitles[activeTab] ?? "Home"}`;
   }, [activeTab]);
+  if (!session) return <Login onLogin={refresh} />;
   const navButtonClass = (name: string) => activeTab === name ? "nav-button active" : "nav-button";
   return (
-    <main>
+    <main className="auth-shell">
       <header>
         <div className="header-brand">
           <img src={prepVaultLogo} alt="PrepVault" />
