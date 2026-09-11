@@ -1086,18 +1086,20 @@ function Practice() {
       <h2><Play size={18} /> Practice</h2>
       {question ? <>
         <div className="practice-content">
-          <p className="question practice-question">{question.questionText}</p>
-          <div className="answers">{(["A", "B", "C", "D"] as const).map((key) => (
-            <button
-              className={selectedAnswers[question.id] === key ? "practice-answer selected" : "practice-answer"}
-              key={key}
-              aria-pressed={selectedAnswers[question.id] === key}
-              onClick={() => answer(key)}
-            >
-              {key}. {optionValue(question, key)}
-            </button>
-          ))}</div>
-          {feedback && <div className={feedback.isCorrect ? "feedback okbox" : "feedback errorbox"}><b>{feedback.isCorrect ? "Correct" : "Incorrect"}</b><p>Correct answer: {feedback.correctAnswer}</p><p>{feedback.explanation}</p></div>}
+          <div className="practice-card">
+            <p className="question practice-question">{question.questionText}</p>
+            <div className="answers">{(["A", "B", "C", "D"] as const).map((key) => (
+              <button
+                className={selectedAnswers[question.id] === key ? "practice-answer selected" : "practice-answer"}
+                key={key}
+                aria-pressed={selectedAnswers[question.id] === key}
+                onClick={() => answer(key)}
+              >
+                {key}. {optionValue(question, key)}
+              </button>
+            ))}</div>
+            {feedback && <div className={feedback.isCorrect ? "feedback okbox" : "feedback errorbox"}><b>{feedback.isCorrect ? "Correct" : "Incorrect"}</b><p>Correct answer: {feedback.correctAnswer}</p><p>{feedback.explanation}</p></div>}
+          </div>
         </div>
         <div className="practice-nav">
           <button className="ghost" disabled={historyIndex <= 0} onClick={loadPrevious}><ArrowLeft size={17} aria-hidden="true" /> Previous</button>

@@ -983,17 +983,35 @@ nav {
   color: #14532d;
 }
 .practice-question {
+  margin-top: 0;
   margin-bottom: 20px;
 }
+.practice-content {
+  padding: 6px 12px 12px;
+}
+.practice-card {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid #b9e6d3;
+  border-radius: 14px;
+  background: #f0fbf6;
+  text-align: left;
+}
 .practice-panel .answers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 .practice-panel .answers button {
+  width: 100%;
+  min-width: 0;
   justify-content: flex-start;
   border: 1px solid #b9e6d3;
   background: var(--primary-soft);
   color: var(--primary-dark);
   text-align: left;
+  overflow-wrap: anywhere;
 }
 .practice-panel .answers button.selected {
   border-color: var(--primary);
@@ -1002,8 +1020,10 @@ nav {
 }
 .practice-nav {
   display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
   gap: 10px;
-  margin-top: 28px;
+  margin-top: 18px;
 }
 .feedback, .okbox, .errorbox {
   padding: 12px;
@@ -1357,6 +1377,13 @@ pre.error { white-space: pre-wrap; padding: 12px; border-radius: 6px; }
   }
   .app-page {
     padding: 20px 16px;
+  }
+  .practice-content {
+    padding-inline: 0;
+  }
+  .practice-card {
+    padding: 18px;
+    border-radius: 10px;
   }
   .page-header h1 {
     font-size: 25px;
