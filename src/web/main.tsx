@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   AlertCircle,
+  ArrowLeft,
+  ArrowRight,
   BookOpen,
   Check,
   CheckCircle2,
@@ -1013,6 +1015,9 @@ function Practice() {
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; correctAnswer: Answer; explanation?: string } | null>(null);
   const [history, setHistory] = useState<Question[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, Answer>>({});
+  const [isLoadingNext, setIsLoadingNext] = useState(false);
+  const isLoadingNextRef = useRef(false);
 
   async function loadNext() {
     setFeedback(null);
@@ -1022,10 +1027,19 @@ function Practice() {
       setQuestion(history[nextIndex]);
       return;
     }
-    const data = await api<{ question: Question }>("/practice/next");
-    setHistory((current) => [...current, data.question]);
-    setHistoryIndex((index) => index + 1);
-    setQuestion(data.question);
+    if (isLoadingNextRef.current) return;
+
+    isLoadingNextRef.current = true;
+    setIsLoadingNext(true);
+    try {
+      const data = await api<{ question: Question }>("/practice/next");
+      setHistory((current) => [...current, data.question]);
+      setHistoryIndex((index) => index + 1);
+      setQuestion(data.question);
+    } finally {
+      isLoadingNextRef.current = false;
+      setIsLoadingNext(false);
+    }
   }
 
   function loadPrevious() {
@@ -1037,9 +1051,32 @@ function Practice() {
   }
 
   useEffect(() => { loadNext().catch(() => undefined); }, []);
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement
+        && (target.isContentEditable || Boolean(target.closest("input, textarea, select, [contenteditable='true']")))
+      ) return;
+
+      if (event.key === "ArrowLeft" && historyIndex > 0) {
+        event.preventDefault();
+        loadPrevious();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        loadNext().catch(() => undefined);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
 
   async function answer(answerValue: Answer) {
     if (!question) return;
+    setSelectedAnswers((current) => ({ ...current, [question.id]: answerValue }));
     const data = await api<{ isCorrect: boolean; correctAnswer: Answer; explanation?: string }>(`/practice/${question.id}/answer`, { method: "POST", body: JSON.stringify({ answer: answerValue }) });
     setFeedback(data);
   }
@@ -1050,12 +1087,21 @@ function Practice() {
       {question ? <>
         <div className="practice-content">
           <p className="question practice-question">{question.questionText}</p>
-          <div className="answers">{(["A", "B", "C", "D"] as const).map((key) => <button key={key} onClick={() => answer(key)}>{key}. {optionValue(question, key)}</button>)}</div>
+          <div className="answers">{(["A", "B", "C", "D"] as const).map((key) => (
+            <button
+              className={selectedAnswers[question.id] === key ? "practice-answer selected" : "practice-answer"}
+              key={key}
+              aria-pressed={selectedAnswers[question.id] === key}
+              onClick={() => answer(key)}
+            >
+              {key}. {optionValue(question, key)}
+            </button>
+          ))}</div>
           {feedback && <div className={feedback.isCorrect ? "feedback okbox" : "feedback errorbox"}><b>{feedback.isCorrect ? "Correct" : "Incorrect"}</b><p>Correct answer: {feedback.correctAnswer}</p><p>{feedback.explanation}</p></div>}
         </div>
         <div className="practice-nav">
-          <button className="ghost" disabled={historyIndex <= 0} onClick={loadPrevious}>Previous</button>
-          <button className="ghost" onClick={loadNext}>Next</button>
+          <button className="ghost" disabled={historyIndex <= 0} onClick={loadPrevious}><ArrowLeft size={17} aria-hidden="true" /> Previous</button>
+          <button className="ghost" disabled={isLoadingNext} onClick={() => loadNext().catch(() => undefined)}>Next <ArrowRight size={17} aria-hidden="true" /></button>
         </div>
       </> : <p className="muted">No active questions.</p>}
     </section>

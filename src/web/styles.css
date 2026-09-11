@@ -460,6 +460,9 @@ nav {
   min-height: 0;
   overflow: auto;
 }
+.admin-workspace .table {
+  align-content: start;
+}
 .grid-form {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -987,7 +990,15 @@ nav {
 }
 .practice-panel .answers button {
   justify-content: flex-start;
+  border: 1px solid #b9e6d3;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
   text-align: left;
+}
+.practice-panel .answers button.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #053d36;
 }
 .practice-nav {
   display: flex;
