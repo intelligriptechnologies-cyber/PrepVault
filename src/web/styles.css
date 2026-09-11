@@ -875,6 +875,13 @@ nav {
 .user-row {
   grid-template-columns: minmax(0, 1fr) minmax(92px, auto) auto;
 }
+.admin-workspace .user-row,
+.admin-workspace .metadata-row {
+  height: 56px;
+  min-height: 56px;
+  padding: 6px 10px;
+  overflow: hidden;
+}
 .row.selectable {
   cursor: pointer;
 }
@@ -886,6 +893,25 @@ nav {
   background: var(--primary-dark);
 }
 .row span, .checkline span { display: grid; gap: 2px; }
+.admin-workspace .row > span {
+  min-width: 0;
+  overflow: hidden;
+}
+.admin-workspace .row span,
+.admin-workspace .row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-workspace .row-actions button,
+.admin-workspace .metadata-row > button {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+.admin-workspace .row-actions .icon-button {
+  width: 34px;
+  padding: 7px;
+}
 .row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -893,7 +919,7 @@ nav {
   gap: 8px;
 }
 .metadata-row small {
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 .import-label {
   font-weight: 800;
@@ -1252,6 +1278,12 @@ pre.error { white-space: pre-wrap; padding: 12px; border-radius: 6px; }
   .row, .user-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+  .admin-workspace .user-row,
+  .admin-workspace .metadata-row {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
   }
   .row-actions {
     justify-content: start;
